@@ -21,6 +21,7 @@ how to use the page table and disk interfaces.
 // based on the chosen algorithm
 int (*get_frame_func)(struct page_table *pt);
 
+struct disk *disk;
 
 int page_fault_count = 0;
 int disk_write_count = 0;
@@ -81,11 +82,8 @@ void page_fault_handler( struct page_table *pt, int page )
 			if ((frame == new_frame) && (bits & PROT_WRITE)) {
 
 				printf("must store dirty page: %d\n", i);
-				pwrite(pt->fd, phys_mem + frame * i, PAGE_SIZE, PAGE_SIZE * i);
+				disk_write(disk, i, &phys_mem[frame*PAGE_SIZE]);
 				disk_write_count++;
-
-				//update this page table entry to frame = 0 and bits = 0
-				page_table_set_entry(pt, i, 0, 0);
 
 				// safe to stop looking if we already found an old assignment
 				break;
@@ -93,7 +91,7 @@ void page_fault_handler( struct page_table *pt, int page )
 		}
 
 		// read page from physical memory and store in virtual memory
-		pread(pt->fd, phys_mem + frame * i, PAGE_SIZE, PAGE_SIZE * page);
+		disk_read(disk, page, &phys_mem[frame*PAGE_SIZE]);
 		disk_read_count++;
 
 		// update page table entry for page
@@ -115,7 +113,7 @@ int main( int argc, char *argv[] )
 	const char *method = argv[3];
 	const char *program = argv[4];
 
-	struct disk *disk = disk_open("myvirtualdisk",npages);
+	disk = disk_open("myvirtualdisk",npages);
 	if(!disk) {
 		fprintf(stderr,"couldn't create virtual disk: %s\n",strerror(errno));
 		return 1;
@@ -155,7 +153,7 @@ int main( int argc, char *argv[] )
 	} else if(!strcmp(program,"focus")) {
 		focus_program(virtmem,npages*PAGE_SIZE);
 	} else {
-		fprintf(stderr,"unknown program: %s\n",argv[3]);
+		fprintf(stderr,"unknown program: %s\n",argv[4]);
 
 	}
 
