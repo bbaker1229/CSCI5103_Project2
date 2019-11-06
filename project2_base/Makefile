@@ -14,6 +14,5 @@ disk.o: disk.c
 program.o: program.c
 	gcc -Wall -g -c program.c -o program.o
 
-
 clean:
-	rm -f *.o virtmem
+	rm -f *.o virtmem myvirtualdisk dataset.csv

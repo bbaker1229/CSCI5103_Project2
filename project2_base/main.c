@@ -28,6 +28,8 @@ int disk_write_count = 0;
 int disk_read_count = 0;
 
 int next_fifo_frame = 0;
+int next_cust_frame = 0;
+int next_page = 0;
 
 // returns a random frame
 int rand_func(struct page_table *pt) {
@@ -43,7 +45,27 @@ int fifo_func(struct page_table *pt) {
 
 // returns a frame based on an LRU algorithm
 int custom_func(struct page_table *pt) {
-	return 0;
+	int frame;
+	int bits;
+	int i;
+	for (i = 0; i < page_table_get_npages(pt); i++) {
+		page_table_get_entry(pt, (i + next_page + 1) % page_table_get_npages(pt), &frame, &bits);
+		printf("%d %d %d\n", bits, frame, next_page);
+		if (bits == 0){
+			next_page = i;
+			next_cust_frame = frame + 1;
+			return (frame + 1);
+		}
+	}
+	for (i = 0; i < page_table_get_npages(pt); i++) {
+		page_table_get_entry(pt, i, &frame, &bits);
+		if (bits == PROT_READ){
+			next_cust_frame = frame;
+			return next_cust_frame;
+		}
+	}
+	next_cust_frame = (next_cust_frame + 1) % page_table_get_nframes(pt);
+	return next_cust_frame;
 }
 
 // demand paging fault handler retrieves and stores pages on the disk
@@ -85,19 +107,20 @@ void page_fault_handler( struct page_table *pt, int page )
 				disk_write(disk, i, &phys_mem[frame*PAGE_SIZE]);
 				disk_write_count++;
 
+				page_table_set_entry(pt, i, 0, 0);
+
 				// safe to stop looking if we already found an old assignment
 				break;
 			}
 		}
 
 		// read page from physical memory and store in virtual memory
-		disk_read(disk, page, &phys_mem[frame*PAGE_SIZE]);
+		disk_read(disk, page, &phys_mem[new_frame*PAGE_SIZE]);
 		disk_read_count++;
 
 		// update page table entry for page
 		page_table_set_entry(pt, page, new_frame, PROT_READ);
 	}
-
 	page_fault_count++;
 }
 
