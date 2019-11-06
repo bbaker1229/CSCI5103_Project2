@@ -44,23 +44,23 @@ do
     ./virtmem 100 $x fifo focus | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
 done
 
-# # Create custom sort dataset
-# for ((x=1; x <= 100; x+=1))
-# do
-#    echo -n "custom,sort,100,$x," >> dataset.csv
-#    ./virtmem 100 $x custom sort | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
-# done
+# Create custom sort dataset
+for ((x=1; x <= 100; x+=1))
+do
+   echo -n "custom,sort,100,$x," >> dataset.csv
+   ./virtmem 100 $x custom sort | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
+done
 
-# # Create custom scan dataset
-# for ((x=1; x <= 100; x+=1))
-# do
-#    echo -n "custom,scan,100,$x," >> dataset.csv
-#    ./virtmem 100 $x custom scan | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
-# done
+# Create custom scan dataset
+for ((x=1; x <= 100; x+=1))
+do
+   echo -n "custom,scan,100,$x," >> dataset.csv
+   ./virtmem 100 $x custom scan | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
+done
 
-# # Create custom focus dataset
-# for ((x=1; x <= 100; x+=1))
-# do
-#    echo -n "custom,scan,100,$x," >> dataset.csv
-#    ./virtmem 100 $x custom focus | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
-# done
+# Create custom focus dataset
+for ((x=1; x <= 100; x+=1))
+do
+   echo -n "custom,focus,100,$x," >> dataset.csv
+   ./virtmem 100 $x custom focus | grep -oP '([\d.]+)' | xargs | sed 's/ /,/g' >> dataset.csv
+done

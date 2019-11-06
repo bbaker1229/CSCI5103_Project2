@@ -113,7 +113,7 @@ void page_fault_handler( struct page_table *pt, int page )
 	// exception was caused by a permissions issue.
 	if ( bits != 0 ) {
 		// add write to the permissions
-		printf("write exception on page: %d\n", page);
+		// printf("write exception on page: %d\n", page);
 		page_table_set_entry(pt, page, frame, (bits | PROT_WRITE) );
 
 	// otherwise, there isn't a frame assigned for this page
@@ -121,7 +121,7 @@ void page_fault_handler( struct page_table *pt, int page )
 		// pick a new frame based on algorithm
 		new_frame = get_frame_func(pt);
 
-		printf("new frame: %d for page: %d\n", new_frame, page);
+		// printf("new frame: %d for page: %d\n", new_frame, page);
 
 		// if frame is occupied and PROT_WRITE is set then write to disk
 		for (i = 0; i < page_table_get_npages(pt); i++) {
@@ -132,7 +132,7 @@ void page_fault_handler( struct page_table *pt, int page )
 			// it to the disk
 			if ((frame == new_frame) && (bits & PROT_WRITE)) {
 
-				printf("must store dirty page: %d\n", i);
+				// printf("must store dirty page: %d\n", i);
 				disk_write(disk, i, &phys_mem[frame*PAGE_SIZE]);
 				disk_write_count++;
 
