@@ -16,6 +16,7 @@ how to use the page table and disk interfaces.
 #include <errno.h>
 #include <time.h>
 #include <unistd.h>
+#include <stdbool.h>
 
 // pointer to the function we're using to pick a new frame,
 // based on the chosen algorithm
@@ -29,7 +30,16 @@ int disk_read_count = 0;
 
 int next_fifo_frame = 0;
 int next_cust_frame = 0;
-int next_page = 0;
+
+// writes the first byte of page 1 to page 2, then the
+// first byte of page 3 to 4, etc.
+void custom_program(char *data, int length ) {
+	int i;
+
+	for (i = 0; i < length / PAGE_SIZE / 2; i += 2) {
+		data[(i+1) * PAGE_SIZE] = data[i * PAGE_SIZE];
+	}
+}
 
 // returns a random frame
 int rand_func(struct page_table *pt) {
@@ -43,29 +53,48 @@ int fifo_func(struct page_table *pt) {
 	return next_frame;
 }
 
-// returns a frame based on an LRU algorithm
+// tries to find a frame prioritizing unallocated frames, then unwritten frames,
+// then just the next fifo frame
 int custom_func(struct page_table *pt) {
 	int frame;
+	int new_frame;
 	int bits;
-	int i;
-	for (i = 0; i < page_table_get_npages(pt); i++) {
-		page_table_get_entry(pt, (i + next_page + 1) % page_table_get_npages(pt), &frame, &bits);
-		printf("%d %d %d\n", bits, frame, next_page);
-		if (bits == 0){
-			next_page = i;
-			next_cust_frame = frame + 1;
-			return (frame + 1);
+	int i, j, k;
+
+	new_frame = next_cust_frame;
+
+	// iterate through bit options PROT_NONE and PROT_READ
+	// but stops before PROT_WRITE
+	for ( k = PROT_NONE; k < PROT_WRITE; k++) {
+
+		// iterate through frames
+		for (j = 0; j < page_table_get_nframes(pt); j++) {
+			bool good_frame = true;
+
+			// iterate through all page table entries
+			for (i = 0; i < page_table_get_npages(pt); i++) {
+
+				page_table_get_entry(pt, i, &frame, &bits);
+
+				// check if this frame already has a page and if the permissions are what
+				// we want this time through
+				if (frame == ((new_frame + j) % page_table_get_nframes(pt)) && bits > k){
+					good_frame = false;
+					break;
+				}
+			}
+
+			// if we made it to here, looks like we found our frame
+			if ( good_frame == true ) {
+				new_frame = (new_frame + j) % page_table_get_nframes(pt);
+				break;
+			}
 		}
 	}
-	for (i = 0; i < page_table_get_npages(pt); i++) {
-		page_table_get_entry(pt, i, &frame, &bits);
-		if (bits == PROT_READ){
-			next_cust_frame = frame;
-			return next_cust_frame;
-		}
-	}
-	next_cust_frame = (next_cust_frame + 1) % page_table_get_nframes(pt);
-	return next_cust_frame;
+
+	next_cust_frame = (new_frame + 1) % page_table_get_nframes(pt);
+
+	return new_frame;
 }
 
 // demand paging fault handler retrieves and stores pages on the disk
@@ -175,6 +204,8 @@ int main( int argc, char *argv[] )
 		scan_program(virtmem,npages*PAGE_SIZE);
 	} else if(!strcmp(program,"focus")) {
 		focus_program(virtmem,npages*PAGE_SIZE);
+	} else if (!strcmp(program,"custom")) {
+		custom_program(virtmem,npages*PAGE_SIZE);
 	} else {
 		fprintf(stderr,"unknown program: %s\n",argv[4]);
 
