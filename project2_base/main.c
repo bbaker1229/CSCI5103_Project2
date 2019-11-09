@@ -31,16 +31,6 @@ int disk_read_count = 0;
 int next_fifo_frame = 0;
 int next_cust_frame = 0;
 
-// writes the first byte of page 1 to page 2, then the
-// first byte of page 3 to 4, etc.
-void custom_program(char *data, int length ) {
-	int i;
-
-	for (i = 0; i < length / PAGE_SIZE / 2; i += 2) {
-		data[(i+1) * PAGE_SIZE] = data[i * PAGE_SIZE];
-	}
-}
-
 // returns a random frame
 int rand_func(struct page_table *pt) {
 	return rand() % page_table_get_nframes(pt);
@@ -113,15 +103,12 @@ void page_fault_handler( struct page_table *pt, int page )
 	// exception was caused by a permissions issue.
 	if ( bits != 0 ) {
 		// add write to the permissions
-		// printf("write exception on page: %d\n", page);
 		page_table_set_entry(pt, page, frame, (bits | PROT_WRITE) );
 
 	// otherwise, there isn't a frame assigned for this page
 	} else {
 		// pick a new frame based on algorithm
 		new_frame = get_frame_func(pt);
-
-		// printf("new frame: %d for page: %d\n", new_frame, page);
 
 		// if frame is occupied and PROT_WRITE is set then write to disk
 		for (i = 0; i < page_table_get_npages(pt); i++) {
@@ -204,11 +191,8 @@ int main( int argc, char *argv[] )
 		scan_program(virtmem,npages*PAGE_SIZE);
 	} else if(!strcmp(program,"focus")) {
 		focus_program(virtmem,npages*PAGE_SIZE);
-	} else if (!strcmp(program,"custom")) {
-		custom_program(virtmem,npages*PAGE_SIZE);
 	} else {
 		fprintf(stderr,"unknown program: %s\n",argv[4]);
-
 	}
 
 	page_table_delete(pt);
